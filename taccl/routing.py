@@ -8,15 +8,17 @@ from taccl.shortest_path_sets import *
 from taccl.topologies.route_sketch import *
 from taccl.utils import *
 from time import time
+import os
 
 verbose = True
 
 class TACCLRouting:
-    def __init__(self, topology, route_sketch, collective):
+    def __init__(self, topology, route_sketch, collective, env):
         self.topology = topology
         self.route_sketch = route_sketch
         self.collective = collective
         self.chunkup = self.route_sketch.hyperparameters.chunkup
+        self.env = env
 
     def latency(self, src, dst, l):
         return self.topology.get_invbw(src,dst)
@@ -344,7 +346,7 @@ class TACCLRouting:
         L = self.topology.L
 
         start_time = time()
-        opt = Model(instance_name)
+        opt = Model(instance_name, env=self.env)
         self._encode(opt)
         opt.optimize()
         end_time = time()

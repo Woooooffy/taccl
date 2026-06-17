@@ -12,10 +12,10 @@ from .known_collectives import KnownCollectives
 from .known_topologies import KnownTopologies
 from .common import *
 
-def optimize_comm_sketch(topology, route_sketch, collective, distribute_over_links=False):
-    path_encoder = TACCLRouting(topology, route_sketch, collective)
+def optimize_comm_sketch(topology, route_sketch, collective, env, distribute_over_links=False):
+    path_encoder = TACCLRouting(topology, route_sketch, collective, env)
     orderer = HeuristicOrderer(topology, route_sketch, collective)
-    scheduler = TACCLScheduler(topology, route_sketch, collective)
+    scheduler = TACCLScheduler(topology, route_sketch, collective, env)
 
     chunk_send, time_send, chunk_recv, time_recv = path_encoder.optimize(distribute_over_links)
     time_recv, chunk_recv, switch_time_recv, switch_chunk_recv, switch_time_send, switch_chunk_send, nic_time_recv, nic_chunk_recv, nic_time_send, nic_chunk_send, switch_link_mapping_recv, switch_link_mapping_send, _ = orderer.perform_ordering(
@@ -25,10 +25,10 @@ def optimize_comm_sketch(topology, route_sketch, collective, distribute_over_lin
     return cont_algo
 
 
-def check_heur_comm_sketch(topology, route_sketch, collective, ts_heur):
-    path_encoder = TACCLRouting(topology, route_sketch, collective)
+def check_heur_comm_sketch(topology, route_sketch, collective, ts_heur, env):
+    path_encoder = TACCLRouting(topology, route_sketch, collective, env)
     orderer = HeuristicOrderer(topology, route_sketch, collective)
-    scheduler = TACCLScheduler(topology, route_sketch, collective)
+    scheduler = TACCLScheduler(topology, route_sketch, collective, env)
 
     chunk_send, time_send, chunk_recv, time_recv = path_encoder.check_heuristic(ts_heur)
     time_recv, chunk_recv, switch_time_recv, switch_chunk_recv, switch_time_send, switch_chunk_send, nic_time_recv, nic_chunk_recv, nic_time_send, nic_chunk_send, switch_link_mapping_recv, switch_link_mapping_send, _ = orderer.perform_ordering(
@@ -59,9 +59,9 @@ def process_dict(send_dict_base, topology, collective):
             time_recv[r][src][l].append(t_ + topology.get_invbw(src,r))
     return chunk_send, time_send, chunk_recv, time_recv
 
-def optimize_reduction(reduce_coll, topology, route_sketch, collective, ts, prefer_local_reduce_first=False):
+def optimize_reduction(reduce_coll, topology, route_sketch, collective, env, ts, prefer_local_reduce_first=False):
     orderer = HeuristicOrderer(topology, route_sketch, collective, reverse=True)
-    scheduler = TACCLRevScheduler(topology, route_sketch, collective)
+    scheduler = TACCLRevScheduler(topology, route_sketch, collective, env)
 
     send_dict_base = get_send_dict_base(ts)
     chunk_send, time_send, chunk_recv, time_recv = process_dict(send_dict_base, topology, collective)
@@ -95,7 +95,7 @@ def make_handle_solve_comm_sketch(cmd_parsers):
     cmd.add_argument('--sketch-file', type=argparse.FileType('r'))
     # cmd.add_argument('--topo-name', type=str)
     cmd.add_argument('--ts-heur', type=int, default="-1")
-    def handle(args, command):
+    def handle(args, command, env):
         if command != name:
             return False
 
@@ -105,9 +105,9 @@ def make_handle_solve_comm_sketch(cmd_parsers):
         collective = collectives.create(args, topology.num_nodes()).chunk_up(route_sketch.hyperparameters.chunkup)
         ts_heur = args.ts_heur
         if ts_heur == -1:
-            algo = optimize_comm_sketch(topology, route_sketch, collective)
+            algo = optimize_comm_sketch(topology, route_sketch, collective, env)
         else:
-            algo = check_heur_comm_sketch(topology, route_sketch, collective, ts_heur)
+            algo = check_heur_comm_sketch(topology, route_sketch, collective, ts_heur, env)
         output_handler(args, algo, algo.name + "_taccl")
         return True
     
@@ -122,7 +122,7 @@ def make_handle_combine_comm_sketch(cmd_parsers):
     cmd.add_argument('--sketch-file', type=str, default=None)
     cmd.add_argument('--ts', type=str, help='timestamp of send_dict for Allgather')
     cmd.add_argument('--prefer-local-reduce-first', action='store_true', help='should prefer reducing a chunk locally first if it is the same either way')
-    def handle(args, command):
+    def handle(args, command, env):
         if command != name:
             return False
         if args.sketch_file is None:
@@ -142,7 +142,7 @@ def make_handle_combine_comm_sketch(cmd_parsers):
         # new_args.collective = 'ReduceScatter'
         new_args.collective = 'Allreduce'
         allreduce_coll = collectives.create(new_args, topology.num_nodes()).chunk_up(route_sketch.hyperparameters.chunkup)
-        algo = optimize_reduction(allreduce_coll, topology, route_sketch, collective, args.ts, args.prefer_local_reduce_first)
+        algo = optimize_reduction(allreduce_coll, topology, route_sketch, collective, env, args.ts, args.prefer_local_reduce_first)
         output_handler(args, algo, algo.name + "_taccl")
         return True
 

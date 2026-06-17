@@ -9,10 +9,11 @@ from taccl.utils import *
 import numpy as np
 
 class TACCLScheduler(object):
-    def __init__(self, topology, route_sketch, collective):
+    def __init__(self, topology, route_sketch, collective, env):
         self.topology = topology
         self.route_sketch = route_sketch
         self.collective = collective
+        self.env = env
 
     # Don't care about relay relaxation - gurobi simple fixes that
     def _is_relay_link(self,r,dst):
@@ -443,7 +444,7 @@ class TACCLScheduler(object):
         print("chunkup =", chunkup)
         instance_name = 'taccl_{}_{}'.format(self.topology.name, self.collective.name)
         start_time = time()
-        opt = Model(instance_name)
+        opt = Model(instance_name, env=self.env)
         self._encode(opt, chunk_order, chunk_time, 
             switch_chunk_order_recv, switch_chunk_time_recv,
             switch_chunk_order_send, switch_chunk_time_send,

@@ -21,7 +21,7 @@ def make_handle_ncclize(cmd_parsers):
 
 
 
-    def handle(args, command):
+    def handle(args, command, env):
         if command != 'ncclize':
             return False
 

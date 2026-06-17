@@ -11,10 +11,11 @@ from taccl.utils import *
 import numpy as np
 
 class TACCLRevScheduler(object):
-    def __init__(self, topology, route_sketch, collective):
+    def __init__(self, topology, route_sketch, collective, env):
         self.topology = topology
         self.route_sketch = route_sketch
         self.collective = collective
+        self.env = env
     
     def latency(self, src, dst, l):
         return self.topology.get_invbw(src,dst)
@@ -465,7 +466,7 @@ class TACCLRevScheduler(object):
         self.topology.reverse_links()
 
         start_time = time()
-        opt = Model('taccl_{}_{}'.format(self.topology.name, self.collective.name))
+        opt = Model('taccl_{}_{}'.format(self.topology.name, self.collective.name), env=self.env)
 
         # call to _encode swaps the order of switch_link_mapping_send and switch_link_mapping_recv
         self._encode(opt, chunk_order, time_recv, 
