@@ -301,7 +301,7 @@ def _allocate_channels_match_topology(op_sets, topology, instances, scale_remote
         ops_by_channel[next_channel[(src,dst)]].extend(op_set)
         link = topology.link(src,dst) * instances    
         global is_reduce
-        if is_reduce and ("DGX1" in topology.name or "DGX2RFix" in topology.name):
+        if is_reduce: # and ("DGX1" in topology.name or "DGX2RFix" in topology.name):
             if link == 0:
                 print(f"link {src}->{dst} was 0. Making it {topology.link(dst,src)}")
                 topology.links[dst][src] = topology.links[src][dst]
@@ -309,6 +309,9 @@ def _allocate_channels_match_topology(op_sets, topology, instances, scale_remote
                 # topology.link(src,dst) = topology.link(dst,src)
                 assert link > 0
         else:
+            #if link <= 0:
+            #    print("INVALID SEND:", src, "->", dst)
+            #    print("Topology links:", topology.links)
             assert link > 0, 'Encountered send on non-existent link'
         if _is_relay_link(topology, src, dst):
             link = link * scale_remote
